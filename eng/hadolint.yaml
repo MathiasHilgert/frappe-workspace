@@ -1,0 +1,2 @@
+# Dockerfile lint (just lint-docker, pre-commit, CI). Anything at warning or above fails.
+failure-threshold: warning

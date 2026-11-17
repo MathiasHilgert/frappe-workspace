@@ -1,5 +1,12 @@
 # Frappé workspace commands: `just` lists them. The package.json scripts stay the source; these wrap them.
+# The local stack's settings come from deploy/.env (optional; cp deploy/.env.example deploy/.env), shared with compose.
+set dotenv-path := "deploy/.env"
 set shell := ["bash", "-euo", "pipefail", "-c"]
+
+# The local stack in containers, Valkey and the workspace image: just stack up | down | reset | ps | logs <service>
+mod stack "eng/just/stack.just"
+# Only the workspace's Valkey, to run `just dev` on this machine: just infra up | down
+mod infra "eng/just/infra.just"
 
 # List the commands
 default:
@@ -27,7 +34,7 @@ preview:
 
 # Every static check: types, code, Markdown, spelling and links
 [group('quality')]
-check: types lint arch deadcode typos links
+check: types lint arch deadcode lint-docker typos links
 
 # Type-check Svelte and TypeScript; warnings fail
 [group('quality')]
@@ -53,6 +60,11 @@ arch:
 [group('quality')]
 deadcode:
     bun run deadcode
+
+# Dockerfile lint (hadolint, pinned image; needs docker)
+[group('quality')]
+lint-docker:
+    docker run --rm -i --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user 65532:65532 -v "$PWD/eng/hadolint.yaml:/.config/hadolint.yaml:ro" hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d hadolint --config /.config/hadolint.yaml - < deploy/Dockerfile
 
 # Check spelling (needs typos: https://github.com/crate-ci/typos)
 [group('quality')]

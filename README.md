@@ -13,8 +13,8 @@ to this app, and only its server talks to frappe-api. The session, the API token
 live in one place on the server; the browser receives views, never API types or credentials.
 
 **Status: scaffold.** The toolchain is in place: SvelteKit on Bun, strict TypeScript, the linters, the boundary rules,
-the test projects and English and Spanish through Paraglide. Next come the image, the CI and the foundation every
-feature builds on.
+the test projects and English and Spanish through Paraglide. It ships as a distroless image with a local stack.
+Next come the CI and the foundation every feature builds on.
 
 ## Architecture
 
@@ -66,6 +66,7 @@ flowchart LR
 
 - [Bun](https://bun.com/docs/installation), the version pinned in [`package.json`](package.json)
 - [just](https://github.com/casey/just#installation)
+- [Docker](https://docs.docker.com/get-docker/) with Compose
 
 ### Run it on your machine
 
@@ -73,6 +74,22 @@ flowchart LR
 just install           # dependencies, exactly as locked
 just dev               # http://localhost:5173
 ```
+
+### Run the whole stack in containers
+
+```bash
+just stack up          # Valkey and the production image of the workspace
+```
+
+| Service (loopback only) | URL                        |
+| ----------------------- | -------------------------- |
+| Workspace               | <http://localhost:4000>    |
+| Valkey                  | `redis://localhost:6380/0` |
+
+frappe-api is not part of this stack: the container reaches the one running on your machine through
+`host.docker.internal:8080`. A port that is taken, or an API somewhere else (`WORKSPACE_FRAPPE_API_URL`), is changed in `deploy/.env` (copy it from
+[`deploy/.env.example`](deploy/.env.example)). `just stack down` stops everything and keeps the sessions;
+`just stack reset` also deletes them.
 
 `just` alone lists every command.
 
