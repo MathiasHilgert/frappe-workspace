@@ -1,0 +1,52 @@
+# Does it still build from nothing? Every night, without caches: a fresh download of Bun and every package, freshly
+# pulled base images and every gate, so drift outside the repository (a yanked package, a broken base image) shows up
+# before a pull request does.
+name: Nightly
+
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  scratch:
+    name: Builds from scratch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the workspace without any cache
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository]
+        with:
+          playwright: 'true'
+          no-cache: 'true'
+      # Types, linters, architecture, dead code and every unit, component and integration test.
+      - name: Run the gate
+        run: bun run gate
+      - name: Build the app
+        env:
+          FRAPPE_API_BASE_URL: http://frappe-api.invalid
+          VALKEY_URL: redis://valkey.invalid:6379/0
+        run: bun run build
+      - name: Run the end-to-end tests
+        run: bun run test:e2e
+      - name: Build the image from freshly pulled base images
+        uses: ./.github/actions/image # zizmor: ignore[self-repository]
+        with:
+          as: frappe-workspace:nightly
+          from-scratch: 'true'

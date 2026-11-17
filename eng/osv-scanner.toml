@@ -1,0 +1,12 @@
+# Advisories this repository accepts for a while: the one list `bun audit` (through eng/scripts/audit.mjs) and
+# osv-scanner (`--config eng/osv-scanner.toml`) both read. An exception has a reason and an expiry (effectiveUntil, at most
+# 30 days out); the audit fails once the date has passed, so a decision to wait is never forgotten. Nothing else is
+# ignored: any other high or critical advisory fails the dependency check.
+
+# picomatch ReDoS through single-branch repeated extglobs: reached through dev tooling only (vite, knip, vitest,
+# eslint and dependency-cruiser walk files with it), never bundled into build/, and no release fixes it yet (4.0.7 is
+# the latest, 2.3.2 is the other copy). Remove this entry when a patched picomatch is released and locked.
+[[IgnoredVulns]]
+id = "GHSA-fc5q-39xc-vjpf"
+effectiveUntil = 2026-12-17
+reason = "picomatch ReDoS (<=4.0.7): dev tooling only, not in build/, no patched release exists yet"
