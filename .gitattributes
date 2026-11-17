@@ -1,0 +1,7 @@
+# Every text file is stored and checked out with LF, whatever the platform.
+* text=auto eol=lf
+
+# Generated files: collapsed in GitHub's diffs and left out of the language statistics.
+bun.lock linguist-generated=true
+i18n/project.inlang/README.md linguist-generated=true
+i18n/project.inlang/.meta.json linguist-generated=true

@@ -1,0 +1,33 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+	"entry": [
+		"src/env.ts",
+		"src/hooks.*.ts",
+		// Vendored shadcn-svelte primitives: the CLI adds and updates them and features import them as they need, so
+		// each one is an entry (its imports count as dependency usage; unused exports of entries are not reported).
+		"src/lib/shared/ui/primitives/**/*.{ts,svelte}",
+		// Config files at a path the plugins do not look in.
+		"eng/commitlint.config.js"
+	],
+	"ignore": [
+		// The `#lib` alias entry in package.json "imports"; the scaffold's placeholder for shared exports.
+		"src/lib/index.ts"
+	],
+	"ignoreDependencies": [
+		// Type-only import in a JSDoc comment of eng/commitlint.config.js; installed with @commitlint/cli.
+		"@commitlint/types",
+		// Named by string in `extends` of eng/commitlint.config.js, which knip does not follow.
+		"@commitlint/config-conventional",
+		// Scaffold dependencies kept for the first component tests and the first feature utilities.
+		"vitest-browser-svelte",
+		"runed",
+		// Run by the git hooks (.config/lefthook.yml); CI installs no hooks, so knip finds no use there.
+		"lefthook"
+	],
+	"ignoreIssues": {
+		// `#lib` (the bare alias) has no importer yet; features import through `#lib/*`.
+		"package.json": ["subpaths"],
+		// SvelteKit's virtual `$app` modules, referenced by tsconfig.json; they are not packages.
+		"tsconfig.json": ["unlisted"]
+	}
+}

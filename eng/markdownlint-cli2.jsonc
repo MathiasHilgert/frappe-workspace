@@ -1,0 +1,24 @@
+// Markdown lint (bun run lint; the VS Code extension reads it through .vscode/settings.json).
+{
+	"config": {
+		"default": true,
+		// Prose is wrapped by the editor, not at a fixed width.
+		"MD013": false,
+		// Repeated headings are fine in different sections.
+		"MD024": { "siblings_only": true },
+		// Compact tables (|---|) are the repository's style.
+		"MD060": false
+	},
+	"globs": ["**/*.md"],
+	"ignores": [
+		"node_modules/**",
+		".svelte-kit/**",
+		"build/**",
+		// Local ODD documents and forge journals (git-ignored).
+		"odd/**",
+		// Written by release-please.
+		"CHANGELOG.md",
+		"i18n/project.inlang/**",
+		"src/lib/paraglide/**"
+	]
+}
