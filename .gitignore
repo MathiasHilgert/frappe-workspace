@@ -1,0 +1,200 @@
+# =============================================================================
+# Node / Bun / SvelteKit
+# =============================================================================
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/
+.npm/
+.bun/
+# Only bun.lock is committed
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lockb
+# Build output
+/.svelte-kit/
+/build/
+.output/
+.vercel/
+.netlify/
+.wrangler/
+dist/
+*.tsbuildinfo
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+.vite/
+# Generated (Paraglide, inlang)
+src/lib/paraglide/
+i18n/project.inlang/cache/
+i18n/project.inlang/.lix/
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-debug.log*
+# Caches
+.cache/
+.eslintcache
+.stylelintcache
+.prettiercache
+*.tmp
+
+# =============================================================================
+# Tests & coverage
+# =============================================================================
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+__screenshots__/
+.vitest-attachments/
+coverage/
+lcov.info
+*.lcov
+.nyc_output/
+
+# =============================================================================
+# Secrets & local configuration
+# =============================================================================
+.env
+.env.*
+!.env.example
+!.env.test
+*.env.local
+secrets.json
+*.pfx
+*.p12
+*.key
+*.pem
+docker-compose.override.yml
+compose.override.yaml
+compose.override.yml
+
+# =============================================================================
+# Docker / runtime data
+# =============================================================================
+.docker-data/
+volumes/
+data/valkey/
+
+# =============================================================================
+# IDEs & editors
+# =============================================================================
+# JetBrains (WebStorm, Fleet)
+.idea/
+*.iml
+.fleet/
+# VS Code (keep shared settings only)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/
+# Vim / Neovim / Emacs
+*.swp
+*.swo
+*~
+.netrwhist
+Session.vim
+.nvim.lua
+.nvimrc
+.exrc
+\#*\#
+.\#*
+
+# =============================================================================
+# OS
+# =============================================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# AI tooling, agents & assistants
+# =============================================================================
+# Claude / Anthropic
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
+# Agent skills (cross-tool)
+.agents/
+# OpenAI Codex
+.codex/
+AGENTS.md
+AGENTS.override.md
+# Google Gemini
+.gemini/
+GEMINI.md
+# GitHub Copilot
+.github/copilot-instructions.md
+.github/instructions/
+.github/prompts/
+.github/chatmodes/
+.copilot/
+# Cursor / Windsurf / Zed / Kiro / Trae
+.cursor/
+.cursorrules
+.cursorignore
+.cursorindexingignore
+.windsurf/
+.windsurfrules
+.codeium/
+.zed/
+.kiro/
+.trae/
+# Aider / Continue / Cline / Roo / Junie / Amazon Q / Tabnine / Augment
+.aider*
+.continue/
+.cline/
+.clinerules
+.roo/
+.roomodes
+.junie/
+.amazonq/
+.tabnine/
+.augment/
+.augmentignore
+# OpenCode / Pi / Crush / Goose / Warp / Qwen / Kilo
+.opencode/
+opencode.json
+.pi/
+.crush/
+CRUSH.md
+.goose/
+.goosehints
+WARP.md
+.qwen/
+QWEN.md
+.kilocode/
+# Agent harnesses, memory & code indexes
+.atl/
+.engram/
+.codegraph/
+.rtk/
+.gentle-ai/
+.serena/
+.specstory/
+.sdd/
+openspec/
+.memory/
+.mem0/
+# Organic Driven Development (ODD)
+odd/
+.odd/

@@ -1,0 +1,14 @@
+# Spell checking (just typos, --config eng/typos.toml). Data and text in other languages are not English prose.
+[files]
+# Dotfiles are checked too; hidden paths are skipped by default.
+ignore-hidden = false
+extend-exclude = [
+  ".git/",
+  "node_modules/",
+  ".svelte-kit/",
+  "build/",
+  "bun.lock",
+  "src/lib/paraglide/",
+  "i18n/project.inlang/",
+  "i18n/messages/es.json",
+]

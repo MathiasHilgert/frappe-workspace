@@ -1,0 +1,20 @@
+{
+	"extends": "$app/tsconfig",
+	"compilerOptions": {
+		// TS-01: strict plus the flags below; verbatimModuleSyntax comes from Kit. exactOptionalPropertyTypes stays off (TS-01).
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"erasableSyntaxOnly": true,
+		"types": ["$app/types", "node"]
+	},
+	"include": [
+		"src",
+		"tests",
+		"vite.config.ts",
+		"prettier.config.js",
+		"eslint.config.js",
+		"eng/*.js",
+		"eng/*.cjs"
+	]
+}
