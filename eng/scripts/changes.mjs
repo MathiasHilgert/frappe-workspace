@@ -50,7 +50,6 @@ const CATEGORIES = {
 		'.gitignore',
 		'.gitattributes',
 		'.prettierignore',
-		'.vscode/**',
 		'.github/renovate.json5',
 		'.github/labels.json',
 		'.github/labeler.yml',

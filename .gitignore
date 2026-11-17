@@ -90,12 +90,8 @@ data/valkey/
 .idea/
 *.iml
 .fleet/
-# VS Code (keep shared settings only)
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# VS Code (editor settings are personal)
+.vscode/
 *.code-workspace
 .history/
 # Vim / Neovim / Emacs

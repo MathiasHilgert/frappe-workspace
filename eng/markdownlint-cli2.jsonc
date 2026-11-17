@@ -1,4 +1,4 @@
-// Markdown lint (bun run lint; the VS Code extension reads it through .vscode/settings.json).
+// Markdown lint (bun run lint).
 {
 	"config": {
 		"default": true,
