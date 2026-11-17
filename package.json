@@ -28,7 +28,7 @@
 		"test:coverage": "vitest run --coverage.enabled --coverage.reportsDirectory=.svelte-kit/coverage --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reporter=lcov '--coverage.include=src/**/*.{ts,svelte}' '--coverage.exclude=**/*.d.ts' '--coverage.exclude=**/*.test.ts' '--coverage.exclude=src/lib/paraglide/**' '--coverage.exclude=src/lib/shared/ui/primitives/**'",
 		"test:scripts": "node --test eng/scripts/*.test.mjs",
 		"test": "bun run test:unit --run && bun run test:e2e",
-		"test:e2e": "playwright install && playwright test --config tests/playwright.config.ts --pass-with-no-tests"
+		"test:e2e": "playwright test --config tests/playwright.config.ts --pass-with-no-tests"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^21.2.4",

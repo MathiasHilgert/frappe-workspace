@@ -72,7 +72,7 @@ flowchart LR
 ### Run it on your machine
 
 ```bash
-just install           # dependencies, exactly as locked
+just install           # dependencies, exactly as locked, and Chromium
 just dev               # http://localhost:5173
 ```
 

@@ -14,10 +14,11 @@ mod github "eng/just/github.just"
 default:
     @just --list --list-submodules
 
-# Install dependencies exactly as locked in bun.lock (the same as CI)
+# Install dependencies exactly as locked in bun.lock (the same as CI), and the Chromium the browser tests run in
 [group('setup')]
 install:
     bun install --frozen-lockfile
+    bunx --no-install playwright install --only-shell chromium
 
 # Start the dev server
 [group('run')]

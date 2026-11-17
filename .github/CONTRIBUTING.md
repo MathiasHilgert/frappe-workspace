@@ -57,7 +57,7 @@ admin rights. `bun run gate` runs the checks that need no extra tool: types, lin
 ### Run it locally
 
 ```bash
-just install           # dependencies, exactly as locked
+just install           # dependencies, exactly as locked, and Chromium
 cp .env.example .env   # every variable is explained there
 just infra up          # the workspace's own Valkey, on localhost:6380
 just dev               # http://localhost:5173

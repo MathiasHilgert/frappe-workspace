@@ -39,7 +39,20 @@ runs:
       run: |
         bunx --no-install paraglide-js compile --project ./i18n/project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations
         bunx --no-install svelte-kit sync
+    # The runner image already has Chrome's system libraries, so only the browser is downloaded (no apt, which can take
+    # minutes), and it is cached per Playwright version. The headless shell is what headless Chromium runs.
+    - name: Read the Playwright version
+      if: inputs.playwright == 'true'
+      id: playwright
+      shell: bash
+      run: echo "version=$(bun -e 'console.log(require("playwright/package.json").version)')" >> "$GITHUB_OUTPUT"
+    - name: Restore the Playwright browsers
+      if: inputs.playwright == 'true' && inputs.no-cache != 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-headless-shell
     - name: Install Chromium for Playwright
       if: inputs.playwright == 'true'
       shell: bash
-      run: bunx --no-install playwright install --with-deps chromium
+      run: bunx --no-install playwright install --only-shell chromium
