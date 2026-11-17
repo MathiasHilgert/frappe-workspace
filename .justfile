@@ -7,6 +7,8 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 mod stack "eng/just/stack.just"
 # Only the workspace's Valkey, to run `just dev` on this machine: just infra up | down
 mod infra "eng/just/infra.just"
+# Repository settings: just github protect | labels (need a remote, gh and admin)
+mod github "eng/just/github.just"
 
 # List the commands
 default:
@@ -89,3 +91,8 @@ test-e2e:
 # Every test suite
 [group('test')]
 test: test-unit test-e2e
+
+# List dependencies with known vulnerabilities
+[group('deps')]
+audit:
+    bun run audit

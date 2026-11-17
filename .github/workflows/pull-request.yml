@@ -1,0 +1,168 @@
+# Is the pull request well formed? Title, commits and branch follow Conventional Commits (the rules are
+# eng/commitlint.config.js, the same as the commit-msg hook), and the pull request is assigned and labelled. The title
+# matters most: main is squash-merged, so it becomes the commit.
+name: Pull request
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  title:
+    name: Title follows Conventional Commits
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the workspace
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository]
+        with:
+          generate: 'false'
+      - name: Validate the title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$TITLE" | bunx --no-install commitlint --config eng/commitlint.config.js
+      - name: Reject AI attribution in the title and the description
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s\n%s\n' "$TITLE" "$BODY" | node eng/scripts/attribution.mjs
+
+  commits:
+    name: Commits follow Conventional Commits
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code with its history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up the workspace
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository]
+        with:
+          generate: 'false'
+      # Merge commits ("Update branch") are GitHub's, not ours: commitlint ignores them by default.
+      - name: Validate every commit message of the pull request
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bunx --no-install commitlint --config eng/commitlint.config.js --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+      - name: Reject AI attribution in every commit message
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git log --no-merges --format=%B "$BASE_SHA..$HEAD_SHA" | node eng/scripts/attribution.mjs
+
+  branch:
+    name: Branch name is valid
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Validate the branch name and match its type to the title
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          # Branches that tools create name themselves.
+          if [[ "$BRANCH" =~ ^(renovate|dependabot)/ || "$BRANCH" == release-please--* ]]; then
+            echo "Tool branch: $BRANCH"
+            exit 0
+          fi
+          types='feat|fix|perf|refactor|test|docs|build|ci|chore|style|revert'
+          if [[ ! "$BRANCH" =~ ^($types)/[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+            echo "::error::\"$BRANCH\" is not <type>/<topic>: type one of ${types//|/, }, topic in lower-case kebab-case (e.g. feat/session-login)"
+            exit 1
+          fi
+          branch_type=${BASH_REMATCH[1]}
+          if [[ "$TITLE" =~ ^($types)(\(|!|:) ]]; then
+            title_type=${BASH_REMATCH[1]}
+            if [ "$branch_type" != "$title_type" ]; then
+              echo "::error::the branch says \"$branch_type\" but the title says \"$title_type\"; use the same type in both"
+              exit 1
+            fi
+          fi
+          echo "Branch $BRANCH is valid."
+
+  triage:
+    name: Assignee and labels set
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # A pull request from a fork gets a read-only token: there is nothing to label with, so the job is skipped.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      issues: write # adds and removes labels
+      pull-requests: write # assigns the author and labels by path
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      # The area labels come from .github/labeler.yml, read through the API, so no checkout is needed. Every label is
+      # defined in .github/labels.json.
+      - name: Label by path
+        uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
+        with:
+          sync-labels: true
+      - name: Assign the author, and label by type and size
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const issue = { ...context.repo, issue_number: pr.number };
+
+            if (pr.assignees.length === 0 && pr.user.type !== 'Bot') {
+              await github.rest.issues.addAssignees({ ...issue, assignees: [pr.user.login] });
+            }
+
+            // Authored lines only: the lock file and the changelog release-please writes do not count.
+            const generated = [/^bun\.lock$/, /^CHANGELOG\.md$/];
+            const files = await github.paginate(github.rest.pulls.listFiles, { ...context.repo, pull_number: pr.number, per_page: 100 });
+            const changed = files
+              .filter((file) => !generated.some((pattern) => pattern.test(file.filename)))
+              .reduce((sum, file) => sum + file.additions + file.deletions, 0);
+            const size = changed < 10 ? 'XS' : changed < 100 ? 'S' : changed < 400 ? 'M' : changed < 1000 ? 'L' : 'XL';
+
+            const header = /^(feat|fix|perf|refactor|test|docs|build|ci|chore|style|revert)(\([^)]*\))?(!)?:/.exec(pr.title);
+            const wanted = [`size: ${size}`];
+            if (header) wanted.push(`type: ${header[1]}`);
+            if (header?.[3]) wanted.push('breaking change');
+
+            const managed = (name) => name.startsWith('size: ') || name.startsWith('type: ') || name === 'breaking change';
+            const { data: current } = await github.rest.issues.listLabelsOnIssue({ ...issue, per_page: 100 });
+            for (const label of current.map((l) => l.name).filter((name) => managed(name) && !wanted.includes(name))) {
+              try {
+                await github.rest.issues.removeLabel({ ...issue, name: label });
+              } catch (error) {
+                if (error.status !== 404) throw error; // removed meanwhile by another run
+              }
+            }
+            await github.rest.issues.addLabels({ ...issue, labels: wanted });
+            await core.summary.addRaw(`Size ${size}: ${changed} authored lines changed. Labels: ${wanted.join(', ')}.`).write();

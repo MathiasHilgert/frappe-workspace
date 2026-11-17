@@ -1,0 +1,197 @@
+# Is the code sound? Formatted as Prettier says, passing the linters, free of type errors and dead code, correctly
+# spelled, with working links, and building.
+name: Code quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Changes
+    # Pull requests only: any other event runs every job, because a skipped "changes" leaves the outputs empty.
+    if: github.event_name == 'pull_request'
+    # The self-repository form ($/) is what zizmor prefers, but actionlint 1.7.12 cannot parse it yet.
+    uses: ./.github/workflows/changes.yml # zizmor: ignore[self-repository]
+    permissions:
+      contents: read
+      pull-requests: read # the called workflow lists the files the pull request changes
+
+  format:
+    name: Code is formatted
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the workspace
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository]
+        with:
+          generate: 'false'
+      - name: Set up just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+        with:
+          just-version: '1.59.0'
+      # The same check as the first command of `bun run lint`.
+      - name: Check the formatting of every file
+        run: bunx --no-install prettier --check .
+      - name: Check justfile formatting
+        run: |
+          for file in .justfile eng/just/*.just; do
+            just --unstable --fmt --check --justfile "$file"
+          done
+
+  lint:
+    name: Code passes the linters
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the workspace
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository]
+      # The same commands as `bun run lint`, after its Prettier check (the "Code is formatted" job).
+      - name: Lint the code
+        run: bunx --no-install eslint . --max-warnings 0
+      - name: Lint Markdown
+        run: bunx --no-install markdownlint-cli2 --config eng/markdownlint-cli2.jsonc
+
+  types:
+    name: Types check without warnings
+    needs: changes
+    # Skipped (reported as passing) only when the change provably cannot affect it; see eng/scripts/changes.mjs.
+    if: ${{ !cancelled() && needs.changes.outputs.app != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the workspace
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository]
+      - name: Check Svelte and TypeScript
+        run: bun run check
+
+  deadcode:
+    name: No dead code
+    needs: changes
+    # Skipped (reported as passing) only when the change provably cannot affect it; see eng/scripts/changes.mjs.
+    if: ${{ !cancelled() && needs.changes.outputs.app != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the workspace
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository]
+      - name: Find unused files, exports and dependencies
+        run: bun run deadcode
+
+  spelling:
+    name: Spelling is correct
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check spelling
+        uses: crate-ci/typos@4c8b7f51ca60df14e3c5ca82770dfbbe6c3dae85 # v1.52.0
+        with:
+          config: eng/typos.toml
+
+  links:
+    name: Links are valid
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check links between documents
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          # The same arguments as `just links`; --hidden because .github/ holds CONTRIBUTING.md and the PR template.
+          args: >-
+            --offline --no-progress --hidden --include-fragments --exclude-path node_modules --exclude-path .svelte-kit
+            --exclude-path build "**/*.md"
+          fail: true
+
+  build:
+    name: App builds
+    needs: changes
+    # Skipped (reported as passing) only when the change provably cannot affect it; see eng/scripts/changes.mjs.
+    if: ${{ !cancelled() && needs.changes.outputs.app != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the workspace
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository]
+      # The values only satisfy src/env.ts's validation while Kit analyses the build, as in deploy/Dockerfile.
+      - name: Build the app
+        env:
+          FRAPPE_API_BASE_URL: http://frappe-api.invalid
+          VALKEY_URL: redis://valkey.invalid:6379/0
+        run: bun run build

@@ -1,0 +1,68 @@
+# Area labels by changed path, applied by the "Pull request" workflow (actions/labeler). Which part of the system a
+# change touches; what kind of change it is comes from the title ("type:" labels). A change can touch several areas.
+# Every label, with its color and description, is defined in .github/labels.json (just github labels).
+
+'area: ui':
+  - changed-files:
+      - any-glob-to-any-file:
+          [
+            'src/lib/shared/ui/**',
+            'src/lib/features/*/presentation/**',
+            'src/routes/**/*.svelte',
+            'src/routes/layout.css',
+            'static/**'
+          ]
+
+'area: i18n':
+  - changed-files:
+      - any-glob-to-any-file: ['i18n/**']
+
+'area: server':
+  - changed-files:
+      - any-glob-to-any-file:
+          ['src/lib/server/**', 'src/lib/features/*/server/**', 'src/env.ts', 'src/hooks.server.ts']
+
+'area: routes':
+  - changed-files:
+      - any-glob-to-any-file: ['src/routes/**', 'src/hooks.ts', 'src/params/**']
+
+'area: features':
+  - changed-files:
+      - any-glob-to-any-file: ['src/lib/features/**']
+
+'area: tests':
+  - changed-files:
+      - any-glob-to-any-file: ['tests/**', 'src/**/*.test.ts']
+
+'area: tooling':
+  - changed-files:
+      - any-glob-to-any-file:
+          [
+            'eng/**',
+            '.config/**',
+            'eslint.config.js',
+            'prettier.config.js',
+            'tsconfig.json',
+            'vite.config.ts',
+            'components.json',
+            '.editorconfig',
+            '.prettierignore',
+            '.gitattributes',
+            '.gitignore'
+          ]
+
+'area: ci':
+  - changed-files:
+      - any-glob-to-any-file: ['.github/**']
+
+'area: deps':
+  - changed-files:
+      - any-glob-to-any-file: ['package.json', 'bun.lock']
+
+'area: deploy':
+  - changed-files:
+      - any-glob-to-any-file: ['deploy/**', '.justfile', 'eng/just/**']
+
+'area: docs':
+  - changed-files:
+      - any-glob-to-any-file: ['README.md', '**/*.md', 'LICENSE', 'CHANGELOG.md']

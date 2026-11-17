@@ -14,7 +14,8 @@ live in one place on the server; the browser receives views, never API types or 
 
 **Status: scaffold.** The toolchain is in place: SvelteKit on Bun, strict TypeScript, the linters, the boundary rules,
 the test projects and English and Spanish through Paraglide. It ships as a distroless image with a local stack.
-Next come the CI and the foundation every feature builds on.
+Every pull request runs the CI, and `main` releases
+through release-please. Next comes the foundation every feature builds on.
 
 ## Architecture
 
@@ -114,7 +115,8 @@ tests will run the critical flows against a real frappe-api; none exists yet.
 | Boundaries        | Layers and feature isolation are checked by dependency-cruiser (`just arch`)                        |
 | User-visible text | Always through Paraglide, in both locales                                                           |
 
-Every code rule is enforced by the checks above.
+Every code rule is enforced by the checks above. How a change gets into `main` (branches, pull requests, the required
+checks) is in [CONTRIBUTING](.github/CONTRIBUTING.md).
 
 ## License
 

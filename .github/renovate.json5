@@ -1,0 +1,55 @@
+{
+	$schema: 'https://docs.renovatebot.com/renovate-schema.json',
+	extends: ['config:best-practices', ':semanticCommitTypeAll(build)', ':semanticCommitScope(deps)'],
+	labels: ['area: deps'],
+	schedule: ['before 6am on monday'],
+	lockFileMaintenance: { enabled: true },
+	packageRules: [
+		{
+			description: 'A release younger than three days may still be yanked or found malicious; wait.',
+			matchDatasources: ['npm'],
+			minimumReleaseAge: '3 days'
+		},
+		{
+			description: 'ESLint plugins and shared configs move together: a new rule set can fail the lint, so review them alone.',
+			matchPackageNames: [
+				'@eslint/*',
+				'@vitest/eslint-plugin',
+				'eslint-config-*',
+				'eslint-plugin-*',
+				'typescript-eslint'
+			],
+			groupName: 'eslint plugins'
+		},
+		{
+			description: 'The Bun in package.json (packageManager) and the Bun base images of deploy/Dockerfile stay on one version.',
+			matchPackageNames: ['bun', 'oven/bun', 'oven-sh/bun'],
+			groupName: 'bun'
+		},
+		{
+			description: 'Base images in deploy/ (Dockerfile ARGs and compose) stay pinned by digest.',
+			matchManagers: ['dockerfile', 'docker-compose'],
+			pinDigests: true
+		},
+		{
+			description: 'GitHub Actions stay pinned by SHA; group their updates.',
+			matchManagers: ['github-actions'],
+			groupName: 'github actions'
+		}
+	],
+	customManagers: [
+		{
+			description: 'The hadolint image, pinned by tag and digest in the just recipe (and the workflows, if they run it directly).',
+			customType: 'regex',
+			managerFilePatterns: [
+				'/^\\.justfile$/',
+				'/^eng/just/.+\\.just$/',
+				'/^\\.github/workflows/.+\\.ya?ml$/'
+			],
+			matchStrings: [
+				'(?<depName>hadolint/hadolint):(?<currentValue>v[^@\\s"\']+)@(?<currentDigest>sha256:[a-f0-9]{64})'
+			],
+			datasourceTemplate: 'docker'
+		}
+	]
+}

@@ -1,0 +1,244 @@
+# Is it safe? Dependencies, secrets, code, the workflows themselves and the image. Also runs weekly: a new advisory
+# shows up without anyone touching the code.
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Changes
+    # Pull requests only: any other event runs every job, because a skipped "changes" leaves the outputs empty.
+    if: github.event_name == 'pull_request'
+    # The self-repository form ($/) is what zizmor prefers, but actionlint 1.7.12 cannot parse it yet.
+    uses: ./.github/workflows/changes.yml # zizmor: ignore[self-repository]
+    permissions:
+      contents: read
+      pull-requests: read # the called workflow lists the files the pull request changes
+
+  # dependency-review-action is not used: GitHub's dependency graph does not read bun.lock, so it would see no change.
+  # osv-scanner reads bun.lock itself, and `bun audit` asks the registry.
+  dependencies:
+    name: No vulnerable dependencies
+    needs: changes
+    # Skipped (reported as passing) only when the change provably cannot affect it; see eng/scripts/changes.mjs.
+    if: ${{ !cancelled() && needs.changes.outputs.audit != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the workspace
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository]
+        with:
+          generate: 'false'
+      # High and critical advisories fail, and so does a registry that cannot be queried. The only exception is the one
+      # in eng/osv-scanner.toml, with its reason; once its expiry passes, this step fails until it is fixed or renewed.
+      - name: Audit the packages in the registry
+        run: bun run audit
+      - name: Download osv-scanner
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=2.7.1
+          gh release download "v$version" --repo google/osv-scanner --pattern osv-scanner_linux_amd64 --pattern osv-scanner_SHA256SUMS --dir "$RUNNER_TEMP"
+          (cd "$RUNNER_TEMP" && sha256sum --check --ignore-missing osv-scanner_SHA256SUMS)
+          chmod +x "$RUNNER_TEMP/osv-scanner_linux_amd64"
+      # osv-scanner exits 1 when it finds advisories of any severity and something else when it fails: only the report
+      # decides, through the same threshold (high and critical) and the same exceptions as `bun audit`.
+      - name: Scan bun.lock with osv-scanner
+        run: |
+          status=0
+          "$RUNNER_TEMP/osv-scanner_linux_amd64" scan source --lockfile bun.lock --config eng/osv-scanner.toml \
+            --format json --output-file "$RUNNER_TEMP/osv.json" || status=$?
+          if [ "$status" -gt 1 ]; then
+            echo "::error::osv-scanner could not complete (exit $status)"
+            exit "$status"
+          fi
+          bun eng/scripts/audit.mjs --osv="$RUNNER_TEMP/osv.json"
+
+  secrets:
+    name: No leaked secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the whole history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+
+  # One job per language, in parallel.
+  code-scanning:
+    name: Code scanning (${{ matrix.language }})
+    needs: changes
+    # Skipped (reported as passing) only when the change provably cannot affect it; see eng/scripts/changes.mjs.
+    if: ${{ !cancelled() && needs.changes.outputs.app != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # uploads the CodeQL results
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Initialize CodeQL for ${{ matrix.language }}
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          # Source-only analysis: JavaScript, TypeScript and workflows need no build.
+          build-mode: none
+          queries: security-extended
+      - name: Analyze ${{ matrix.language }}
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}
+
+  # The required check "Code has no known vulnerabilities": a matrix job's name carries its language, so this one reports the whole.
+  code:
+    name: Code has no known vulnerabilities
+    needs: code-scanning
+    # A skipped scan (nothing it analyzes changed) passes; a failed or cancelled language fails this check.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require every language to have passed or been skipped
+        env:
+          RESULT: ${{ needs.code-scanning.result }}
+        run: |
+          echo "Code scanning: $RESULT"
+          [ "$RESULT" = "success" ] || [ "$RESULT" = "skipped" ]
+
+  workflows:
+    name: Workflows are secure
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Lint the workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=1.7.12
+          archive="actionlint_${version}_linux_amd64.tar.gz"
+          gh release download "v$version" --repo rhysd/actionlint --pattern "$archive" --pattern "actionlint_${version}_checksums.txt" --dir "$RUNNER_TEMP"
+          (cd "$RUNNER_TEMP" && sha256sum --check --ignore-missing "actionlint_${version}_checksums.txt")
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
+      - name: Audit the workflows for security issues
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          advanced-security: false
+          version: '1.32.0'
+
+  dockerfile:
+    name: Dockerfile follows best practices
+    needs: changes
+    # Skipped (reported as passing) only when the change provably cannot affect it; see eng/scripts/changes.mjs.
+    if: ${{ !cancelled() && needs.changes.outputs.image != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Lint the Dockerfile
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: deploy/Dockerfile
+          config: eng/hadolint.yaml
+
+  image:
+    name: Container image is clean
+    needs: changes
+    # Skipped (reported as passing) only when the change provably cannot affect it; see eng/scripts/changes.mjs.
+    if: ${{ !cancelled() && needs.changes.outputs.image != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Built here, from this commit, on every run: a fork, a schedule and a manual run scan the same way as a push.
+      - name: Build the image
+        uses: ./.github/actions/image # zizmor: ignore[self-repository]
+        with:
+          as: frappe-workspace:scan
+      - name: Scan the image for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: frappe-workspace:scan
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Generate the SBOM
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: frappe-workspace:scan
+          format: spdx-json
+          artifact-name: frappe-workspace.spdx.json

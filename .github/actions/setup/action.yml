@@ -1,0 +1,45 @@
+# The workspace ready to build and test: Bun at the version package.json pins (packageManager), the dependencies exactly
+# as bun.lock locks them (no install scripts), and the code the build generates (translations and Kit's types).
+name: Set up the workspace
+description: Installs Bun and the locked dependencies, and generates the translations and Kit types
+
+inputs:
+  generate:
+    description: Generate the Paraglide messages and Kit's types (type checks, linters, tests and builds need them)
+    default: 'true'
+  playwright:
+    description: Install Chromium for Playwright (component and end-to-end tests)
+    default: 'false'
+  no-cache:
+    description: Download Bun and every package again, ignoring any cache (the nightly build)
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      with:
+        bun-version-file: package.json
+        no-cache: ${{ inputs.no-cache }}
+    # --ignore-scripts: no dependency runs code at install time; `prepare` (svelte-kit sync) runs below on purpose.
+    - name: Install the locked dependencies
+      shell: bash
+      env:
+        NO_CACHE: ${{ inputs.no-cache }}
+      run: |
+        flags=(--frozen-lockfile --ignore-scripts)
+        if [ "$NO_CACHE" = "true" ]; then
+          flags+=(--no-cache)
+        fi
+        bun install "${flags[@]}"
+    - name: Generate the translations and Kit's types
+      if: inputs.generate == 'true'
+      shell: bash
+      run: |
+        bunx --no-install paraglide-js compile --project ./i18n/project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations
+        bunx --no-install svelte-kit sync
+    - name: Install Chromium for Playwright
+      if: inputs.playwright == 'true'
+      shell: bash
+      run: bunx --no-install playwright install --with-deps chromium
