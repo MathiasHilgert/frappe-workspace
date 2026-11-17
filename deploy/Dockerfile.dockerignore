@@ -1,0 +1,27 @@
+# Read by `docker build -f deploy/Dockerfile .` (BuildKit looks for <Dockerfile>.dockerignore next to the Dockerfile).
+# Only what the build needs: sources, static files, translations (i18n) and the config files. Paths are relative to the root.
+.git/
+.codegraph/
+.svelte-kit/
+.vscode/
+.idea/
+.agents/
+.claude/
+.atl/
+node_modules/
+build/
+odd/
+tests/
+test-results/
+playwright-report/
+deploy/
+eng/
+src/lib/paraglide/
+i18n/project.inlang/cache/
+**/*.md
+# Secrets and local settings never reach the image.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.pfx
