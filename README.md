@@ -13,9 +13,10 @@ to this app, and only its server talks to frappe-api. The session, the API token
 live in one place on the server; the browser receives views, never API types or credentials.
 
 **Status: early.** The foundation is in place: configuration validated at start, security headers and a nonce-based
-CSP, error handling, structured JSON logs with pino, English and Spanish through Paraglide, the UI primitives, and the rules that keep features apart.
-Next come the frappe-api contract and its generated client, the Valkey session store and the first feature,
-signing in.
+CSP, error handling, structured JSON logs with pino, the session store in Valkey (opaque `__Host-` cookie, fail closed
+with a 503 when Valkey is down), health probes, English and Spanish through Paraglide, the UI primitives, and the rules
+that keep features apart. Next come the frappe-api contract and its generated client, the guard that sends anonymous
+visitors to sign in, and the first feature, signing in.
 
 ## Architecture
 
@@ -58,7 +59,7 @@ flowchart LR
 | UI         | Tailwind CSS 4, bits-ui primitives in the shadcn-svelte style, Hugeicons                                          |
 | Validation | Zod                                                                                                               |
 | i18n       | [Paraglide](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) (English and Spanish)                       |
-| Sessions   | Valkey, the BFF's own (planned; the local stack already runs it)                                                  |
+| Sessions   | Valkey, the BFF's own, through ioredis behind a `SessionStore` port                                               |
 | Testing    | Vitest (server, browser components, integration), MSW, Playwright                                                 |
 | Tooling    | Docker Compose, [just](https://github.com/casey/just), ESLint, Prettier, dependency-cruiser, lefthook, commitlint |
 
@@ -97,6 +98,15 @@ frappe-api is not part of this stack: the container reaches the one running on y
 `just stack reset` also deletes them.
 
 `just` alone lists every command.
+
+### Health probes
+
+| Endpoint            | Answers                                                                                | Used by                 |
+| ------------------- | -------------------------------------------------------------------------------------- | ----------------------- |
+| `GET /health/live`  | `200 {"status":"ok"}` while the process runs; never calls Valkey                       | the CI image probe      |
+| `GET /health/ready` | `200 {"status":"ok"}` while Valkey answers `PING`, else `503 {"status":"unavailable"}` | the Compose healthcheck |
+
+Neither reads the session, and both send `Cache-Control: no-store`.
 
 ## Testing
 

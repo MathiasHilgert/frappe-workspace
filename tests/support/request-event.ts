@@ -38,7 +38,7 @@ export function fakeRequestEvent(init: FakeRequestEventInit = {}): RequestEvent 
 		// Unit tests go through MSW, which fails any request the test did not declare (TEST-06).
 		fetch: globalThis.fetch,
 		getClientAddress: refuse('getClientAddress'),
-		locals: {},
+		locals: { app: { sessionStore: { ping: refuse('locals.app.sessionStore.ping') } } },
 		params: {},
 		platform: undefined,
 		request,

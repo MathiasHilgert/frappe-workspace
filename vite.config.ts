@@ -84,6 +84,8 @@ export default defineConfig({
 					name: 'integration',
 					environment: 'node',
 					include: ['src/**/*.integration.test.ts'],
+					// TEST-01: one Valkey container per run; each worker takes its own database.
+					globalSetup: ['./tests/setup/valkey.ts'],
 					setupFiles: ['./tests/setup/integration.ts']
 				}
 			}

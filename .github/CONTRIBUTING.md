@@ -68,14 +68,15 @@ frappe-api of its own, but the workspace calls the one running on your machine. 
 
 ## Testing
 
-| Suite       | Where it runs                             | Files                          | Command          |
-| ----------- | ----------------------------------------- | ------------------------------ | ---------------- |
-| Unit        | Vitest on the server, no browser          | `src/**/*.test.ts`             | `just test-unit` |
-| Component   | a real browser (Chromium)                 | `src/**/*.svelte.test.ts`      | `just test-unit` |
-| Integration | against real services, frappe-api via MSW | `src/**/*.integration.test.ts` | `just test-unit` |
-| End to end  | Playwright against the built app          | `tests/e2e/`                   | `just test-e2e`  |
+| Suite       | Where it runs                          | Files                          | Command          |
+| ----------- | -------------------------------------- | ------------------------------ | ---------------- |
+| Unit        | Vitest on the server, no browser       | `src/**/*.test.ts`             | `just test-unit` |
+| Component   | a real browser (Chromium)              | `src/**/*.svelte.test.ts`      | `just test-unit` |
+| Integration | a Valkey container, frappe-api via MSW | `src/**/*.integration.test.ts` | `just test-unit` |
+| End to end  | Playwright against the built app       | `tests/e2e/`                   | `just test-e2e`  |
 
-`just test-unit` runs the three Vitest projects (`server`, `client`, `integration`). Unit and integration tests answer
+`just test-unit` runs the three Vitest projects (`server`, `client`, `integration`); the integration project starts one
+Valkey container per run, so Docker must be running. Unit and integration tests answer
 for frappe-api through MSW (`tests/msw/`); end-to-end tests run the critical flows. Coverage is measured and reported on
 the pull request, but nothing fails on a percentage (TEST-09 in `workspace-conventions`).
 

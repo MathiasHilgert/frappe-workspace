@@ -129,6 +129,14 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+    # The preview build reads sessions from Valkey (SEC-02); the same pinned image as deploy/compose.yaml, on the port
+    # tests/playwright.config.ts defaults VALKEY_URL to.
+    services:
+      valkey:
+        image: valkey/valkey:8.1.11-alpine@sha256:2602ace2be6569bc2bbb06f873776516ab9089821525be34f4305c67eb9db02a
+        ports: ['6380:6379']
+        options: >-
+          --health-cmd "valkey-cli ping" --health-interval 2s --health-timeout 3s --health-retries 15
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
@@ -219,20 +227,20 @@ jobs:
           # Only a push to main writes the shared layer cache; pull requests read it.
           cache-to: ${{ github.event_name == 'push' && 'type=gha,scope=frappe-workspace,mode=max' || '' }}
       # The distroless image has no shell to run a health check in, so the probe comes from outside. The values only satisfy
-      # src/env.ts's validation: nothing listens behind them, and the page needs no upstream.
+      # src/env.ts's validation: nothing listens behind them, so the probe is liveness (no Valkey), not readiness.
       - name: Start the image the way it is deployed (read-only, no capabilities, unprivileged)
         run: >-
           docker run --detach --name workspace --read-only --cap-drop ALL --security-opt no-new-privileges
           --user 65532:65532 --publish 127.0.0.1:3000:3000
           --env FRAPPE_API_BASE_URL=http://frappe-api.invalid --env VALKEY_URL=redis://valkey.invalid:6379/0
           frappe-workspace:test
-      - name: Probe GET /
+      - name: Probe GET /health/live
         run: |
           for _ in $(seq 30); do
-            curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3000/ && exit 0
+            curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3000/health/live && exit 0
             sleep 2
           done
-          echo "::error::GET / never answered with a success status"
+          echo "::error::GET /health/live never answered with a success status"
           exit 1
       - name: Show the container logs
         if: failure()
