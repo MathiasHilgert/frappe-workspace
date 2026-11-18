@@ -13,7 +13,7 @@ to this app, and only its server talks to frappe-api. The session, the API token
 live in one place on the server; the browser receives views, never API types or credentials.
 
 **Status: early.** The foundation is in place: configuration validated at start, security headers and a nonce-based
-CSP, error handling, English and Spanish through Paraglide, the UI primitives, and the rules that keep features apart.
+CSP, error handling, structured JSON logs with pino, English and Spanish through Paraglide, the UI primitives, and the rules that keep features apart.
 Next come the frappe-api contract and its generated client, the Valkey session store and the first feature,
 signing in.
 
