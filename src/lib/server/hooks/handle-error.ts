@@ -1,17 +1,9 @@
 import type { HandleServerError } from '@sveltejs/kit/hooks';
-
-/** One structured log line for an unexpected error. */
-export type ErrorLogEntry = {
-	readonly traceId: string;
-	readonly method: string;
-	readonly route: string | null;
-	readonly status: number;
-	readonly error: unknown;
-};
+import type { Logger } from 'pino';
 
 /** What {@link createHandleError} needs from the outside world. */
 export type HandleErrorDeps = {
-	readonly log: (entry: ErrorLogEntry) => void;
+	readonly log: Pick<Logger, 'error'>;
 	readonly newTraceId: () => string;
 };
 
@@ -51,22 +43,17 @@ export function createHandleError({ log, newTraceId }: HandleErrorDeps): HandleS
 		}
 
 		const traceId = newTraceId();
-		log({
-			traceId,
-			method: event.request.method,
-			route: event.route.id,
-			status: 500,
-			error
-		});
+		log.error(
+			{
+				traceId,
+				method: event.request.method,
+				route: event.route.id,
+				status: 500,
+				err: error
+			},
+			'unexpected error'
+		);
 		// `message` is omitted on purpose: Kit then answers its generic 'Internal Error'.
 		return { code: unexpectedErrorCodes.unexpected, traceId };
 	};
 }
-
-/** The production hook. `console.error` stands in until the pino logger lands (OPS-03). */
-export const handleError: HandleServerError = createHandleError({
-	log: (entry) => {
-		console.error('unexpected error', entry);
-	},
-	newTraceId: randomTraceId
-});

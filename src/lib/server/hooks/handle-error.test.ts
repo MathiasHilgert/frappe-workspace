@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { fakeRequestEvent } from '../../../../tests/support/request-event';
-import { createHandleError, randomTraceId, type ErrorLogEntry } from './handle-error';
+import { createHandleError, randomTraceId } from './handle-error';
+
+type Logged = { readonly entry: object; readonly message: string | undefined };
 
 function setup() {
-	const logged: ErrorLogEntry[] = [];
+	const logged: Logged[] = [];
 	const handleError = createHandleError({
-		log: (entry) => {
-			logged.push(entry);
+		log: {
+			error: (entry: object, message?: string) => {
+				logged.push({ entry, message });
+			}
 		},
 		newTraceId: () => 'generated-trace-id'
 	});
@@ -37,11 +41,14 @@ describe('handleError', () => {
 			body: { code: 'workspace.server.unexpected', traceId: 'generated-trace-id' },
 			logged: [
 				{
-					traceId: 'generated-trace-id',
-					method: 'POST',
-					route: '/',
-					status: 500,
-					error: bug
+					entry: {
+						traceId: 'generated-trace-id',
+						method: 'POST',
+						route: '/',
+						status: 500,
+						err: bug
+					},
+					message: 'unexpected error'
 				}
 			]
 		});
