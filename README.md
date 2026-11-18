@@ -12,9 +12,10 @@ Frappé Workspace is a SvelteKit app on Bun that works as a strict backend for f
 to this app, and only its server talks to frappe-api. The session, the API token, the error mapping and the locale
 live in one place on the server; the browser receives views, never API types or credentials.
 
-**Status: early.** The toolchain is in place, the app ships as a distroless image and every pull request runs the CI.
-The configuration is validated at start, every response carries security headers and a nonce-based CSP, and unexpected
-errors reach the browser as a safe message with a trace id. Next come the UI primitives.
+**Status: early.** The foundation is in place: configuration validated at start, security headers and a nonce-based
+CSP, error handling, English and Spanish through Paraglide, the UI primitives, and the rules that keep features apart.
+Next come the frappe-api contract and its generated client, the Valkey session store and the first feature,
+signing in.
 
 ## Architecture
 
@@ -50,16 +51,16 @@ flowchart LR
 
 ## Tech stack
 
-| Area       | Choice                                                                                                  |
-| ---------- | ------------------------------------------------------------------------------------------------------- |
-| Runtime    | [Bun](https://bun.com/), SvelteKit 3 with `adapter-bun`, Svelte 5 (runes, async)                        |
-| Language   | TypeScript, strict, warnings fail                                                                       |
-| UI         | Tailwind CSS 4                                                                                          |
-| i18n       | [Paraglide](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) (English and Spanish)             |
-| Sessions   | Valkey, the BFF's own (planned)                                                                         |
-| Testing    | Vitest (server, browser components, integration), MSW, Playwright                                       |
-| Validation | Zod                                                                                                     |
-| Tooling    | [just](https://github.com/casey/just), ESLint, Prettier, dependency-cruiser, knip, lefthook, commitlint |
+| Area       | Choice                                                                                                            |
+| ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| Runtime    | [Bun](https://bun.com/), SvelteKit 3 with `adapter-bun`, Svelte 5 (runes, async)                                  |
+| Language   | TypeScript, strict, warnings fail                                                                                 |
+| UI         | Tailwind CSS 4, bits-ui primitives in the shadcn-svelte style, Hugeicons                                          |
+| Validation | Zod                                                                                                               |
+| i18n       | [Paraglide](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) (English and Spanish)                       |
+| Sessions   | Valkey, the BFF's own (planned; the local stack already runs it)                                                  |
+| Testing    | Vitest (server, browser components, integration), MSW, Playwright                                                 |
+| Tooling    | Docker Compose, [just](https://github.com/casey/just), ESLint, Prettier, dependency-cruiser, lefthook, commitlint |
 
 ## Getting started
 
