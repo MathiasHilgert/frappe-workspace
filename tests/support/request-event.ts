@@ -5,7 +5,8 @@ export type FakeRequestEventInit = {
 	readonly url?: string;
 	readonly method?: string;
 	readonly headers?: Record<string, string>;
-	readonly routeId?: RequestEvent['route']['id'];
+	/** Any route id, also ones the app has no route for (the policy tests need them). */
+	readonly routeId?: string | null;
 };
 
 const refuse = (what: string) => (): never => {
@@ -42,7 +43,9 @@ export function fakeRequestEvent(init: FakeRequestEventInit = {}): RequestEvent 
 		params: {},
 		platform: undefined,
 		request,
-		route: { id: init.routeId ?? null },
+		// The generated `RouteId` union holds only the app's own routes; a hook test needs others.
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- TS-02: the policy tests need route ids the app has no route for
+		route: { id: (init.routeId ?? null) as RequestEvent['route']['id'] },
 		setHeaders: refuse('setHeaders'),
 		url,
 		isDataRequest: false,

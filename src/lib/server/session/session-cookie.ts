@@ -23,6 +23,14 @@ export function deleteSessionCookie(cookies: Cookies, cookieName: string): void 
 }
 
 /**
+ * The `Set-Cookie` line {@link deleteSessionCookie} queues, for a response built outside Kit's
+ * `resolve` (which is what writes queued cookies), such as the guard's 303.
+ */
+export function serializeSessionCookieDeletion(cookies: Cookies, cookieName: string): string {
+	return cookies.serialize(cookieName, '', { ...cookieAttributes, maxAge: 0 });
+}
+
+/**
  * Opens the BFF session for a login (SEC-01, SEC-02): a new sid, the session stored until its
  * `absoluteExpiresAt`, and the cookie expiring then. The key of any sid the request already
  * carried is deleted first, so a sid planted before login never becomes authenticated (S12).

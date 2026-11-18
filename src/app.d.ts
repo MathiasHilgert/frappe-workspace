@@ -16,6 +16,8 @@ declare global {
 		// routes the ping of the store and never `save` or `delete`.
 		interface Locals {
 			session?: Session;
+			/** Set by `handleSession` when it queued the deletion of the sid cookie. */
+			sessionCookieCleared?: true;
 			app: { sessionStore: Pick<SessionStore, 'ping'> };
 		}
 		// interface PageData {}
