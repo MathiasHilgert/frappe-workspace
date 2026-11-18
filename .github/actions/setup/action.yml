@@ -17,6 +17,12 @@ inputs:
 runs:
   using: composite
   steps:
+    # Vitest runs under Node (its binary has a node shebang), and the code reads time through the global Temporal
+    # (TS-04), which Node 26 ships and the runner's default Node may not. Bun runs the app; Node only runs the tests.
+    - name: Set up Node
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 26
     - name: Set up Bun
       uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       with:

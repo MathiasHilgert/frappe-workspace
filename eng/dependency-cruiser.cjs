@@ -93,6 +93,28 @@ module.exports = {
 			to: { path: '^src/.*/server/.*generated/' }
 		},
 		{
+			name: 'vendor-clients-confined',
+			severity: 'error',
+			comment:
+				'ARCH-03, DES-02: ioredis is imported only by the session store and hooks.server.ts, not even for a type, so the client can be replaced.',
+			from: {
+				pathNot: [
+					'^src/hooks[.]server[.]ts$',
+					'^src/lib/server/session/session-store[.]ts$',
+					'[.](spec|test)[.](js|ts)$'
+				]
+			},
+			to: { path: '(^|/)node_modules/ioredis/' }
+		},
+		{
+			name: 'vendor-clients-confined-pino',
+			severity: 'error',
+			comment:
+				'ARCH-03, OPS-03: pino is imported only by logger.ts; a type-only import (`import type { Logger }`) is allowed anywhere.',
+			from: { pathNot: ['^src/lib/server/logger[.]ts$', '[.](spec|test)[.](js|ts)$'] },
+			to: { path: '(^|/)node_modules/pino/', dependencyTypesNot: ['type-only'] }
+		},
+		{
 			name: 'not-to-spec',
 			severity: 'error',
 			comment: 'TEST-01: production code never imports a test file or anything under tests/.',
@@ -117,7 +139,7 @@ module.exports = {
 			from: {},
 			to: {
 				couldNotResolve: true,
-				pathNot: ['^[$]app/', '^[$]env/', '^[$]service-worker$', '^virtual:']
+				pathNot: ['^[$]app/', '^[$]env/', '^[$]service-worker$', '^virtual:', '^[.]/[$]types$']
 			}
 		}
 	],

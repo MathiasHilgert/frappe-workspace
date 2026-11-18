@@ -1,4 +1,5 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"app_name": "Frappé"
+	"app_name": "Frappé",
+	"error_service_unavailable": "The service is temporarily unavailable. Try again in a moment."
 }

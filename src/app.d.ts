@@ -1,3 +1,6 @@
+import type { Session } from '#lib/server/session/session.js';
+import type { SessionStore } from '#lib/server/session/session-store.js';
+
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
@@ -9,7 +12,12 @@ declare global {
 			message: string;
 			traceId?: string;
 		}
-		// interface Locals {}
+		// ARCH-04, S13: `session` is set by `handleSession`; `app` by `handleComposition`, which gives
+		// routes the ping of the store and never `save` or `delete`.
+		interface Locals {
+			session?: Session;
+			app: { sessionStore: Pick<SessionStore, 'ping'> };
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
