@@ -1,6 +1,0 @@
-{
-	"files.associations": {
-		"*.css": "tailwindcss"
-	},
-	"markdownlint.configFile": "eng/markdownlint-cli2.jsonc"
-}
