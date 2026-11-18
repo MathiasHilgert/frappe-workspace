@@ -7,6 +7,10 @@ import adapter from '@sveltejs/adapter-bun';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
+	build: {
+		// SEC-04: `font-src 'self'` blocks a `data:` font, so never inline a woff2 (Kit keeps Vite's 4096-byte default otherwise).
+		assetsInlineLimit: (file) => (file.endsWith('.woff2') ? false : undefined)
+	},
 	plugins: [
 		enhancedImages(),
 		tailwindcss(),
