@@ -9,6 +9,7 @@ import {
 	VALKEY_URL
 } from '$app/env/private';
 import { systemClock } from '#lib/server/clock.js';
+import { createHandleAuthGuard } from '#lib/server/hooks/auth-guard.js';
 import { createHandleComposition } from '#lib/server/hooks/composition.js';
 import { createHandleError, randomTraceId } from '#lib/server/hooks/handle-error.js';
 import { createHandleSession } from '#lib/server/hooks/session.js';
@@ -64,7 +65,7 @@ process.on('sveltekit:shutdown', () => {
 
 const sessionStore = createSessionStore(valkey, systemClock);
 
-// ARCH-04: handleTelemetry and handleAuthGuard join this sequence with the OTel SDK and the guard.
+// ARCH-04: handleTelemetry joins this sequence with the OTel SDK.
 export const handle = sequence(
 	handleParaglide,
 	handleSecurityHeaders,
@@ -74,5 +75,6 @@ export const handle = sequence(
 		clock: systemClock,
 		log
 	}),
-	createHandleComposition({ sessionStore })
+	createHandleComposition({ sessionStore }),
+	createHandleAuthGuard({ cookieName: SESSION_COOKIE_NAME })
 );

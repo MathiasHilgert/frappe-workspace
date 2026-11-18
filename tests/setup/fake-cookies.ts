@@ -15,6 +15,8 @@ export type CookieWrite =
 /** A hand-written {@link Cookies} holding the request's cookies and recording every write. */
 export class FakeCookies implements Cookies {
 	readonly writes: CookieWrite[] = [];
+	/** Every `serialize` call, in order. */
+	readonly serialized: { name: string; value: string; options: CookieOptions }[] = [];
 	private readonly jar: Map<string, string>;
 
 	constructor(initial: Record<string, string> = {}) {
@@ -43,7 +45,12 @@ export class FakeCookies implements Cookies {
 		throw new Error('The fake cookies do not parse.');
 	}
 
-	serialize(): string {
-		throw new Error('The fake cookies do not serialize.');
+	/** A minimal `Set-Cookie` line: name, value and the options that were passed, as `Key=value`. */
+	serialize(name: string, value: string, options: CookieOptions): string {
+		this.serialized.push({ name, value, options });
+		const attributes = Object.entries(options ?? {}).map(([key, setting]) =>
+			setting === true ? key : `${key}=${String(setting)}`
+		);
+		return [`${name}=${value}`, ...attributes].join('; ');
 	}
 }

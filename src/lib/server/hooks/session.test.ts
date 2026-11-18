@@ -1,4 +1,3 @@
-import type { RequestEvent } from '@sveltejs/kit';
 import { describe, expect, it } from 'vitest';
 import { FakeCookies } from '../../../../tests/setup/fake-cookies';
 import { FakeSessionStore } from '../../../../tests/setup/fake-session-store';
@@ -21,7 +20,7 @@ const session: Session = {
 
 type SetupInit = {
 	readonly cookie?: string;
-	readonly routeId?: RequestEvent['route']['id'];
+	readonly routeId?: string | null;
 	readonly isDataRequest?: boolean;
 	readonly isRemoteRequest?: boolean;
 };
@@ -116,6 +115,45 @@ describe('handleSession without a usable cookie', () => {
 		}
 	);
 
+	it('flags the deletion in locals so the guard can repeat it on its 303', async () => {
+		const { event, run } = setup({ cookie: sid });
+
+		await run();
+
+		expect(event.locals.sessionCookieCleared).toBe(true);
+	});
+
+	it('flags the deletion of a malformed cookie', async () => {
+		const { event, run } = setup({ cookie: 'short' });
+
+		await run();
+
+		expect(event.locals.sessionCookieCleared).toBe(true);
+	});
+
+	it('flags the deletion of an expired session', async () => {
+		const { store, event, run } = setup({ cookie: sid });
+		store.sessions.set(sid, { ...session, absoluteExpiresAt: '2026-06-01T09:59:59Z' });
+
+		await run();
+
+		expect(event.locals.sessionCookieCleared).toBe(true);
+	});
+
+	it('does not flag a live session nor a request without a cookie', async () => {
+		const live = setup({ cookie: sid });
+		live.store.sessions.set(sid, session);
+		const none = setup();
+
+		await live.run();
+		await none.run();
+
+		expect([
+			live.event.locals.sessionCookieCleared,
+			none.event.locals.sessionCookieCleared
+		]).toStrictEqual([undefined, undefined]);
+	});
+
 	it('deletes the cookie when no session is stored for the sid', async () => {
 		const { cookies, run, seen } = setup({ cookie: sid });
 
@@ -155,6 +193,17 @@ describe('handleSession on health routes', () => {
 			}).toStrictEqual({ seen: [{ session: undefined }], calls: [], writes: [], cache: null });
 		}
 	);
+});
+
+describe('handleSession beside the health routes', () => {
+	it.each(['/health/other', '/health/live/x'])('still reads the store on %s', async (routeId) => {
+		const { store, run } = setup({ cookie: sid, routeId });
+		store.sessions.set(sid, session);
+
+		await run();
+
+		expect(store.calls).toStrictEqual([{ operation: 'read', sid }]);
+	});
 });
 
 describe('handleSession during a Valkey outage (SEC-03)', () => {

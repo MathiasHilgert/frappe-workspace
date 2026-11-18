@@ -3,6 +3,7 @@ import type { Handle } from '@sveltejs/kit/hooks';
 import type { Logger } from 'pino';
 import { m } from '#lib/paraglide/messages.js';
 import type { Clock } from '../clock';
+import { isHealthRoute } from '../health/health-route';
 import { deleteSessionCookie } from '../session/session-cookie';
 import {
 	failureLogFields,
@@ -30,17 +31,23 @@ function serviceUnavailable(event: RequestEvent): Response {
 	return Response.json(body, { status: 503, headers: { 'Cache-Control': 'no-store' } });
 }
 
+/** Queues the cookie deletion and records it for the guard, whose 303 bypasses Kit's cookie writer. */
+function clearCookie(event: RequestEvent, cookieName: string): void {
+	deleteSessionCookie(event.cookies, cookieName);
+	event.locals.sessionCookieCleared = true;
+}
+
 /**
  * Builds `handleSession` (SEC-01..03): reads the session of the sid cookie into
  * `locals.session`. A missing, malformed, unknown or expired cookie means no session (and the
  * cookie is deleted, except when absent); a store that fails or is too slow answers 503 without
- * retrying, treating the user as anonymous or touching the cookie. `/health/*` never reads the
+ * retrying, treating the user as anonymous or touching the cookie. The health probes never read the
  * store. Responses of routed requests are `private, no-store`.
  */
 export function createHandleSession({ store, cookieName, clock, log }: HandleSessionDeps): Handle {
 	return async ({ event, resolve }) => {
 		const routeId = event.route.id;
-		if (routeId?.startsWith('/health/') === true) return resolve(event);
+		if (isHealthRoute(routeId)) return resolve(event);
 
 		const sid = event.cookies.get(cookieName);
 		if (sid !== undefined) {
@@ -56,9 +63,9 @@ export function createHandleSession({ store, cookieName, clock, log }: HandleSes
 					Temporal.Instant.compare(Temporal.Instant.from(stored.absoluteExpiresAt), clock.now()) >
 						0;
 				if (live) event.locals.session = stored;
-				else deleteSessionCookie(event.cookies, cookieName);
+				else clearCookie(event, cookieName);
 			} else {
-				deleteSessionCookie(event.cookies, cookieName);
+				clearCookie(event, cookieName);
 			}
 		}
 

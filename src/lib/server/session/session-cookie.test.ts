@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { FakeCookies } from '../../../../tests/setup/fake-cookies';
 import { FakeSessionStore } from '../../../../tests/setup/fake-session-store';
 import type { Session } from './session';
-import { deleteSessionCookie, endSession, startSession } from './session-cookie';
+import {
+	deleteSessionCookie,
+	endSession,
+	serializeSessionCookieDeletion,
+	startSession
+} from './session-cookie';
 import { isSid } from './sid';
 
 const cookieName = '__Host-workspace-sid';
@@ -134,6 +139,22 @@ describe('deleteSessionCookie', () => {
 
 		expect(cookies.writes).toStrictEqual([
 			{ kind: 'delete', name: cookieName, options: { path: '/', secure: true, httpOnly: true } }
+		]);
+	});
+});
+
+describe('serializeSessionCookieDeletion', () => {
+	it('serializes the attributes of the queued deletion plus maxAge 0', () => {
+		const cookies = new FakeCookies({ [cookieName]: oldSid });
+
+		serializeSessionCookieDeletion(cookies, cookieName);
+
+		expect(cookies.serialized).toStrictEqual([
+			{
+				name: cookieName,
+				value: '',
+				options: { path: '/', httpOnly: true, secure: true, maxAge: 0 }
+			}
 		]);
 	});
 });
