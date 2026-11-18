@@ -13,8 +13,8 @@ to this app, and only its server talks to frappe-api. The session, the API token
 live in one place on the server; the browser receives views, never API types or credentials.
 
 **Status: early.** The toolchain is in place, the app ships as a distroless image and every pull request runs the CI.
-The configuration is validated at start, and errors travel as typed results. Next come the server hooks (security
-headers, a nonce-based CSP, error handling) and the UI primitives.
+The configuration is validated at start, every response carries security headers and a nonce-based CSP, and unexpected
+errors reach the browser as a safe message with a trace id. Next come the UI primitives.
 
 ## Architecture
 
@@ -25,7 +25,7 @@ flowchart LR
   browser([Browser]) -->|remote functions| kit
 
   subgraph workspace[Frappé Workspace · one Bun process]
-    kit[SvelteKit server<br/>hooks: locale]
+    kit[SvelteKit server<br/>hooks: locale · security headers]
     auth[Session · auth guard<br/>planned]
     features[Features<br/>presentation · domain · server<br/>planned]
     gateway[Gateways<br/>generated frappe-api client<br/>planned]
