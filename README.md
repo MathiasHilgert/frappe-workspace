@@ -4,7 +4,7 @@ The console of Frappé, the operating system for restaurants and cafés in Latin
 teams work in, in front of [frappe-api](https://github.com/MathiasHilgert/frappe-api).
 
 [Getting started](#getting-started) · [Architecture](#architecture) · [Testing](#testing) ·
-[Conventions](#conventions)
+[Conventions](#conventions) · [Documentation](#documentation)
 
 ## About
 
@@ -12,10 +12,9 @@ Frappé Workspace is a SvelteKit app on Bun that works as a strict backend for f
 to this app, and only its server talks to frappe-api. The session, the API token, the error mapping and the locale
 live in one place on the server; the browser receives views, never API types or credentials.
 
-**Status: scaffold.** The toolchain is in place: SvelteKit on Bun, strict TypeScript, the linters, the boundary rules,
-the test projects and English and Spanish through Paraglide. It ships as a distroless image with a local stack.
-Every pull request runs the CI, and `main` releases
-through release-please. Next comes the foundation every feature builds on.
+**Status: early.** The toolchain is in place, the app ships as a distroless image and every pull request runs the CI.
+The configuration is validated at start, and errors travel as typed results. Next come the server hooks (security
+headers, a nonce-based CSP, error handling) and the UI primitives.
 
 ## Architecture
 
@@ -51,15 +50,16 @@ flowchart LR
 
 ## Tech stack
 
-| Area     | Choice                                                                                                  |
-| -------- | ------------------------------------------------------------------------------------------------------- |
-| Runtime  | [Bun](https://bun.com/), SvelteKit 3 with `adapter-bun`, Svelte 5 (runes, async)                        |
-| Language | TypeScript, strict, warnings fail                                                                       |
-| UI       | Tailwind CSS 4                                                                                          |
-| i18n     | [Paraglide](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) (English and Spanish)             |
-| Sessions | Valkey, the BFF's own (planned)                                                                         |
-| Testing  | Vitest (server, browser components, integration), MSW, Playwright                                       |
-| Tooling  | [just](https://github.com/casey/just), ESLint, Prettier, dependency-cruiser, knip, lefthook, commitlint |
+| Area       | Choice                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------- |
+| Runtime    | [Bun](https://bun.com/), SvelteKit 3 with `adapter-bun`, Svelte 5 (runes, async)                        |
+| Language   | TypeScript, strict, warnings fail                                                                       |
+| UI         | Tailwind CSS 4                                                                                          |
+| i18n       | [Paraglide](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) (English and Spanish)             |
+| Sessions   | Valkey, the BFF's own (planned)                                                                         |
+| Testing    | Vitest (server, browser components, integration), MSW, Playwright                                       |
+| Validation | Zod                                                                                                     |
+| Tooling    | [just](https://github.com/casey/just), ESLint, Prettier, dependency-cruiser, knip, lefthook, commitlint |
 
 ## Getting started
 
@@ -68,11 +68,14 @@ flowchart LR
 - [Bun](https://bun.com/docs/installation), the version pinned in [`package.json`](package.json)
 - [just](https://github.com/casey/just#installation)
 - [Docker](https://docs.docker.com/get-docker/) with Compose
+- A running frappe-api: from its checkout, `just stack up` serves it on <http://localhost:8080>
 
 ### Run it on your machine
 
 ```bash
 just install           # dependencies, exactly as locked, and Chromium
+cp .env.example .env   # every variable is explained there
+just infra up          # the workspace's own Valkey, on localhost:6380
 just dev               # http://localhost:5173
 ```
 
@@ -114,9 +117,19 @@ tests will run the critical flows against a real frappe-api; none exists yet.
 | Code quality      | Type-check, ESLint and markdownlint warnings fail; a complexity budget per function                 |
 | Boundaries        | Layers and feature isolation are checked by dependency-cruiser (`just arch`)                        |
 | User-visible text | Always through Paraglide, in both locales                                                           |
+| Configuration     | Declared once in `src/env.ts`; an invalid variable stops the start                                  |
 
 Every code rule is enforced by the checks above. How a change gets into `main` (branches, pull requests, the required
 checks) is in [CONTRIBUTING](.github/CONTRIBUTING.md).
+
+## Documentation
+
+| Where                                     | What                                                              |
+| ----------------------------------------- | ----------------------------------------------------------------- |
+| [`.env.example`](.env.example)            | Every variable the app reads, with its default and limits         |
+| [`CONTRIBUTING`](.github/CONTRIBUTING.md) | Commands, branches, commits and the checks a pull request passes  |
+| [`deploy/`](deploy/)                      | The image and the local stack                                     |
+| frappe-api's OpenAPI document             | Every endpoint the workspace can call (`/docs/` on a running API) |
 
 ## License
 
